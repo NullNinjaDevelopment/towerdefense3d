@@ -1,22 +1,22 @@
 #ifndef TESTWINDOW_H
 #define TESTWINDOW_H
 
-#include <QMainWindow>
+#include <QtOpenGL/QGLWidget>
 
-namespace Ui {
-class TestWindow;
-}
+class TestWindow : public QGLWidget {
 
-class TestWindow : public QMainWindow
-{
-    Q_OBJECT
-    
+    Q_OBJECT // must include this if you use Qt signals/slots
+
 public:
-    explicit TestWindow(QWidget *parent = 0);
-    ~TestWindow();
-    
-private:
-    Ui::TestWindow *ui;
+    TestWindow(QWidget *parent = NULL);
+
+protected:
+    void initializeGL();
+    void resizeGL(int w, int h);
+    void paintGL();
+    void mousePressEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
+    void keyPressEvent(QKeyEvent *event);
 };
 
 #endif // TESTWINDOW_H
