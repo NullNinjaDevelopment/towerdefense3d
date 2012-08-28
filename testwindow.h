@@ -2,6 +2,7 @@
 #define TESTWINDOW_H
 
 #include <QtOpenGL/QGLWidget>
+#include <QTimer>
 
 class TestWindow : public QGLWidget {
 
@@ -17,6 +18,12 @@ protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void keyPressEvent(QKeyEvent *event);
+
+    QTimer* timer;
+
+public slots:
+    void showFps();
+    void processing();
 };
 
 #endif // TESTWINDOW_H
