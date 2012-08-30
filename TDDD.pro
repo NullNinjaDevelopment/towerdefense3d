@@ -11,8 +11,10 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        testwindow.cpp
+        testwindow.cpp \
+    gametile.cpp
 
-HEADERS  += testwindow.h
+HEADERS  += testwindow.h \
+    gametile.h
 
 FORMS    += testwindow.ui
