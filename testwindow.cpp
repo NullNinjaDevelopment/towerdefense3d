@@ -14,9 +14,18 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <stdlib.h>
+#include <time.h>
 
 // Local
 #include "testwindow.h"
+#include "gametile.h"
+
+// CONSTANTS
+const int BOARD_WIDTH = 20;
+const int BOARD_HEIGHT = 20;
+const int TILE_WIDTH = 2;
+const int TILE_HEIGHT = 2;
 
 float viewx = 0.0f, viewy = 0.0f;
 int mouseoriginx = -1, mouseoriginy = -1;
@@ -24,15 +33,46 @@ float zoomdist = 0.0f;
 
 float fps;
 
+GameTile* gameboard[BOARD_WIDTH][BOARD_HEIGHT];
+
 /* GENERIC FUNCTIONS */
 void drawTiles(){
-    glBegin(GL_QUADS);
-        glColor3f(1,0,0);
-        glVertex3f(-1, -1, 0);
-        glVertex3f(1, -1, 0);
-        glVertex3f(1, 1, 0);
-        glVertex3f(-1, 1, 0);
-    glEnd();
+    int centerx, centery;
+    GameTile* tile;
+    for(int i = 0; i < BOARD_WIDTH; ++i){
+        //printf("~~~~~~~~~COLUMN %d~~~~~~~~~\n", i);
+        for(int j = 0; j < BOARD_HEIGHT; ++j){
+
+            tile = gameboard[i][j];
+            centerx = tile->x * TILE_WIDTH;
+            centery = tile->y * TILE_HEIGHT;
+
+            glBegin(GL_QUADS);
+                glColor4f(tile->r, tile->g, tile->b, tile->a);
+                //glColor3f(255, 0, 0);
+                glVertex3f(-1+centerx, -1+centery, 0);
+                glVertex3f(1+centerx, -1+centery, 0);
+                glVertex3f(1+centerx, 1+centery, 0);
+                glVertex3f(-1+centerx, 1+centery, 0);
+            glEnd();
+            //printf("Coloring in tile! x=%f, y=%f, red=%f, blue=%f, green=%f, alpha=%f\n", tile->x, tile->y, tile->r, tile->g, tile->b, tile->a);
+        }
+    }
+}
+
+void initTileMap(){
+    srand(time(NULL));
+    for(int i = 0; i < BOARD_WIDTH; ++i){
+        printf("###############COLUMN %d###############\n", i);
+        for(int j = 0; j < BOARD_HEIGHT; ++j){
+            float red = (float)(rand() % 100)*0.01;
+            float green = (float)(rand() % 100)*0.01;
+            float blue = (float)(rand() % 100)*0.01;
+            float alpha = (float)((rand() % 51) + 50)*0.01;
+            gameboard[i][j] = new GameTile((float)i, (float)j, red, green, blue, alpha);
+            printf("Creating tile! x=%f, y=%f, red=%f, green=%f, blue=%f, alpha=%f\n", (float)i, (float)j, red, green, blue, alpha);
+        }
+    }
 }
 
 
@@ -45,10 +85,12 @@ std::string floatToString(float d)
 
 TestWindow::TestWindow(QWidget *parent) : QGLWidget(parent) {
     printf("START TestWindow()\n");
+    initTileMap();
+
     setMouseTracking(true);
 
     this->setParent(parent);
-    this->setGeometry(0, 0, 800, 600);
+    this->setGeometry(this->x(), this->y(), 800, 600);
 
     initializeGL();
 
@@ -57,7 +99,7 @@ TestWindow::TestWindow(QWidget *parent) : QGLWidget(parent) {
 
     QTimer* fpsTimer = new QTimer();
     QObject::connect(fpsTimer, SIGNAL(timeout()), this, SLOT(showFps()));
-    fpsTimer->start(10);
+    fpsTimer->start(1000);
 
     this->timer = new QTimer();
     QObject::connect(timer, SIGNAL(timeout()), this, SLOT(processing()));
@@ -96,18 +138,24 @@ void TestWindow::resizeGL(int w, int h) {
     float height = (float) w / (float) h;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(50.0f, height, 1.0, 1000.0);
+    //gluPerspective(50.0f, height, 1.0, 1000.0);
     //glOrtho(-5, 5, -5, 5, -10, -20.0);
+    glOrtho(-20.0,20.0,-20.0,20.0,-1.0,100.0);//default = -1.0,+1.0,-1.0,+1.0,-1.0,+1.0
+    //glOrtho(left,right,bottom,top,near,far);//default = -1.0,+1.0,-1.0,+1.0,-1.0,+1.0
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     printf("END resizeGL()\n");
+
+    // Set mouse origin values to the center point
+    mouseoriginx = TestWindow::x() + (int)(TestWindow::width()*0.5f+0.5f);
+    mouseoriginy = TestWindow::y() + (int)(TestWindow::height()*0.5f+0.5f);
 }
 
 float testval = 0.0f;
 void TestWindow::paintGL() {
-    printf("START paintGL()\n");
-    testval += 1.0f;
-    printf("%f\n", testval);
+    //printf("START paintGL()\n");
+    //testval += 1.0f;
+    //printf("%f\n", testval);
 
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -122,10 +170,20 @@ void TestWindow::paintGL() {
     glRotatef(45.0f, 0.0f, 0.0f, 1.0f);
     glRotatef(45.0f,  -1.0f,  1.0f,  0.0f);
 
+    /* */
     drawTiles();
+    /* *
+    glBegin(GL_QUADS);
+        glColor3f(1, 0, 0);
+        glVertex3f(-1, -1, 0);
+        glVertex3f(1, -1, 0);
+        glVertex3f(1, 1, 0);
+        glVertex3f(-1, 1, 0);
+    glEnd();
+    /* */
 
     //glPopMatrix();
-    printf("END paintGL()\n");
+    //printf("END paintGL()\n");
 }
 
 void TestWindow::mousePressEvent(QMouseEvent *event) {
@@ -149,76 +207,56 @@ void TestWindow::mousePressEvent(QMouseEvent *event) {
 
 
 void TestWindow::mouseMoveEvent(QMouseEvent *event) {
+    /*
+    printf("###### Comparing: %d, %d and %d, %d ######\n", event->x(), event->y(), QCursor::pos().x(), QCursor::pos().y());
+
     std::string myOutput = "";
     myOutput += "---------------------------\n";
-    //printf("---------------------------\n");
     myOutput += "START mouseMoveEvent()\n";
-    //printf("START mouseMoveEvent()\n");
-    myOutput += "AFTER EVENT POS: ";
-    myOutput += floatToString(event->x());
-    myOutput += ", ";
-    myOutput += floatToString(event->y());
-    myOutput += "\n";
-    //printf("BEFORE EVENT POS: %d, %d\n", event->x(), event->y());
-    myOutput += "BEFORE MOUSE ORIGIN: ";
-    myOutput += floatToString(mouseoriginx);
-    myOutput += ", ";
-    myOutput += floatToString(mouseoriginy);
-    myOutput += "\n";
-    //printf("BEFORE MOUSE ORIGIN: %d, %d\n", mouseoriginx, mouseoriginy);
+    // PRINT BEFORE DIFF POS
     myOutput += "BEFORE DIFF POS: ";
-    myOutput += floatToString(0.005f*((float)event->x() - mouseoriginx));
+    myOutput += floatToString(0.02f*((float)QCursor::pos().x() - mouseoriginx));
     myOutput += ", ";
-    myOutput += floatToString(0.005f*((float)event->y() + mouseoriginy));
+    myOutput += floatToString(0.02f*((float)QCursor::pos().y() - mouseoriginy));
     myOutput += "\n";
-    //printf("BEFORE DIFF POS: %f, %f\n", (float)event->x() - mouseoriginx*0.5f, (float)event->y() - mouseoriginy*0.5f);
+    // PRINT BEFORE VIEW POS
     myOutput += "BEFORE VIEW POS: ";
     myOutput += floatToString(viewx);
     myOutput += ", ";
     myOutput += floatToString(viewy);
     myOutput += "\n";
-    //printf("BEFORE VIEW POS: %f, %f\n", viewx, viewy);
+    */
     if (mouseoriginx < 0 || mouseoriginy < 0){
-        //printf("MOUSE ORIGIN POS: %d, %d\n", mouseoriginx, mouseoriginy);
         mouseoriginx = TestWindow::x() + (int)(TestWindow::width()*0.5f+0.5f);
         mouseoriginy = TestWindow::y() + (int)(TestWindow::height()*0.5f+0.5f);
-        //printf("MOUSE ORIGIN POS: %d, %d\n", mouseoriginx, mouseoriginy);
     }
     else{
-        viewx = viewx - 0.005f*(float)((float)event->x() - mouseoriginx);
-        viewy = viewy + 0.005f*(float)((float)event->y() - mouseoriginy);
-        myOutput += "AFTER EVENT POS: ";
-        myOutput += floatToString(event->x());
-        myOutput += ", ";
-        myOutput += floatToString(event->y());
-        myOutput += "\n";
-        //printf("AFTER EVENT POS: %d, %d\n", event->x(), event->y());
-        myOutput += "AFTER MOUSE ORIGIN: ";
-        myOutput += floatToString(mouseoriginx);
-        myOutput += ", ";
-        myOutput += floatToString(mouseoriginy);
-        myOutput += "\n";
-        //printf("AFTER MOUSE ORIGIN: %d, %d\n", mouseoriginx, mouseoriginy);
+        viewx = viewx - 0.02f*(float)((float)QCursor::pos().x() - mouseoriginx);
+        viewy = viewy + 0.02f*(float)((float)QCursor::pos().y() - mouseoriginy);
+        /*
+        // PRINT AFTER DIFF POS
         myOutput += "AFTER DIFF POS: ";
-        myOutput += floatToString(0.005f*((float)event->x() - mouseoriginx));
+        myOutput += floatToString(0.02f*((float)QCursor::pos().x() - mouseoriginx));
         myOutput += ", ";
-        myOutput += floatToString(0.005f*((float)event->y() + mouseoriginy));
+        myOutput += floatToString(0.02f*((float)QCursor::pos().y() - mouseoriginy));
         myOutput += "\n";
-        //printf("AFTER DIFF POS: %f, %f\n", (float)event->x() - mouseoriginx*0.5f, (float)event->y() - mouseoriginy*0.5f);
+        // PRINT AFTER VIEW POS
         myOutput += "AFTER VIEW POS: ";
         myOutput += floatToString(viewx);
         myOutput += ", ";
         myOutput += floatToString(viewy);
         myOutput += "\n";
-        //printf("AFTER VIEW POS: %f, %f\n", viewx, viewy);
+        */
         QCursor::setPos(mouseoriginx, mouseoriginy);
     }
+    /*
     myOutput += "END mouseMoveEvent()\n";
     myOutput += "---------------------------\n";
     //printf("END mouseMoveEvent()\n");
     //printf("%s", myOutput);
     std::cout << myOutput;
     std::cout.flush();
+    */
     paintGL();
 }
 
